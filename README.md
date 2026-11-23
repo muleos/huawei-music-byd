@@ -1,3 +1,5 @@
+> **本仓库是「华为音乐 · 比亚迪车机版」分支。** 应用名「华为音乐」、包名 `com.huawei.music.byd`，在线数据源为华为音乐。构建与车机适配说明见 [README-HUAWEI.md](README-HUAWEI.md)。
+
 # Sonance · 山水有清音
 
 一个 Android 本地音乐播放器。Kotlin + Jetpack Compose + Media3，单 Activity、前台服务常驻后台播放。
