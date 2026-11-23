@@ -57,7 +57,7 @@ object OnlineDownloader {
     private const val TAG = "SonanceDownload"
 
     /** 公开音乐目录下的子目录名。改它会让已下载的歌下次扫描后"换一个文件夹" */
-    const val FOLDER_NAME = "山水有清音下载"
+    const val FOLDER_NAME = "华为音乐下载"
 
     private const val CONNECT_TIMEOUT_MS = 10_000
     private const val READ_TIMEOUT_MS = 30_000

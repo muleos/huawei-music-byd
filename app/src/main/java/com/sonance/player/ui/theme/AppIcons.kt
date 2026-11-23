@@ -24,19 +24,20 @@ object AppIcons {
      * manifest 里默认启用的 alias 与 [com.sonance.player.data.Prefs.appIconId]
      * 的兜底值都以它为准 —— 三处要一起改。
      */
-    const val DEFAULT_ID = "s2_4"
+    const val DEFAULT_ID = "huawei"
 
     private fun v(id: String, label: String, preview: Int, icon: Int, bgArgb: Long) =
         AppIconVariant(
             id = id,
             label = label,
             preview = preview,
-            aliasName = "com.sonance.player.alias.Icon_$id",
+            aliasName = "com.huawei.music.byd.alias.Icon_$id",
             icon = icon,
             bgColor = androidx.compose.ui.graphics.Color(bgArgb),
         )
 
     val all: List<AppIconVariant> = listOf(
+        v("huawei", "华为音乐 · 音符渐变", R.mipmap.ic_launcher, R.mipmap.ic_launcher, 0xFFFFFFFF),
         v("s2_4", "均衡器 · 圆弧波形", R.drawable.logo_s2_4, R.mipmap.ic_launcher_s2_4, 0xFF0D2826),
         v("sonance_dial", "回响之钮 · 触感徽章", R.drawable.logo_sonance_dial, R.mipmap.ic_launcher_sonance_dial, 0xFF131518),
         v("min_vinyl", "极简黑胶 · 同心韵律", R.drawable.logo_min_vinyl, R.mipmap.ic_launcher_min_vinyl, 0xFF141416),

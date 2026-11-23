@@ -129,8 +129,8 @@ fun SideNavigation(
             .verticalScroll(rememberScrollState())
             .padding(vertical = if (dense) 10.dp else 20.dp)
     ) {
-        // 品牌（矮屏窄栏下省略）
-        if (expanded || !dense) {
+        // 品牌（矮屏窄栏下省略；名称为空时整块隐藏，不再显示图标/副标题）
+        if ((expanded || !dense) && appName.isNotBlank()) {
             // 双击品牌块 = 手机顶栏「双击标题」的等价入口（改应用名 / 换顶栏图标）
             val brandTap = rememberUpdatedState(onBrandDoubleTap)
             // logoId 为空时用内置 Logo；为空时底色取默认图标自己的底色，
@@ -460,22 +460,21 @@ fun AppTopBar(
                 tint = skin.text
             )
         } else if (logoId == "none") {
-            // 「无」图标：不画底色、不画图案，和背景融为一体，但保留同样大小的
-            // 可点区域 —— 单击进设置，用户不会把入口弄丢。
-            Box(
-                Modifier
-                    .padding(start = 10.dp)
-                    .size(if (dense) 26.dp else 30.dp)
-                    .then(
-                        if (onLogoClick != null) {
-                            Modifier.clickable(onClick = onLogoClick)
-                        } else if (titleDoubleTap != null) {
-                            Modifier.clickable(onClick = titleDoubleTap)
-                        } else {
-                            Modifier
-                        }
-                    )
-            )
+            // 没有图标也没有点击语义时整块不占位；只有确实有入口需求才保留透明区域。
+            if (onLogoClick != null || titleDoubleTap != null) {
+                Box(
+                    Modifier
+                        .padding(start = 10.dp)
+                        .size(if (dense) 26.dp else 30.dp)
+                        .then(
+                            if (onLogoClick != null) {
+                                Modifier.clickable(onClick = onLogoClick)
+                            } else {
+                                Modifier.clickable(onClick = titleDoubleTap!!)
+                            }
+                        )
+                )
+            }
         } else {
             Box(
                 Modifier

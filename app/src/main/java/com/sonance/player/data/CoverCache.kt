@@ -189,6 +189,56 @@ object CoverCache {
         }.getOrNull()
     }
 
+    /**
+     * 给 MediaSession / 车机仪表盘用的封面字节。
+     *
+     * 通知栏和系统媒体中心可以用 `content://` URI，但仪表盘进程经常没有 URI 授权；
+     * `MediaMetadata.artworkData` 是走 Binder 直接带过去的，不依赖 FileProvider 权限。
+     * Binder 单次事务有限，必须压到小尺寸，不能把 1.9MB 原图塞进去。
+     */
+    fun artworkData(context: Context, key: String?, maxBytes: Int = 320_000): ByteArray? {
+        if (key == null) return null
+        val file = fileOf(context, key)
+        if (!file.isFile || file.length() <= 0L) return null
+        return runCatching {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(file.absolutePath, bounds)
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@runCatching null
+            var sample = 1
+            while (bounds.outWidth / (sample * 2) >= 640 && bounds.outHeight / (sample * 2) >= 640) {
+                sample *= 2
+            }
+            val options = BitmapFactory.Options().apply {
+                inSampleSize = sample
+                inPreferredConfig = Bitmap.Config.ARGB_8888
+            }
+            val bitmap = BitmapFactory.decodeFile(file.absolutePath, options) ?: return@runCatching null
+            try {
+                val scaled = if (bitmap.width > 720 || bitmap.height > 720) {
+                    val ratio = minOf(720f / bitmap.width, 720f / bitmap.height)
+                    Bitmap.createScaledBitmap(
+                        bitmap,
+                        (bitmap.width * ratio).toInt().coerceAtLeast(1),
+                        (bitmap.height * ratio).toInt().coerceAtLeast(1),
+                        true
+                    )
+                } else bitmap
+                var quality = 84
+                var out = java.io.ByteArrayOutputStream()
+                scaled.compress(Bitmap.CompressFormat.JPEG, quality, out)
+                while (out.size() > maxBytes && quality > 54) {
+                    quality -= 10
+                    out = java.io.ByteArrayOutputStream()
+                    scaled.compress(Bitmap.CompressFormat.JPEG, quality, out)
+                }
+                if (scaled !== bitmap) scaled.recycle()
+                out.toByteArray().takeIf { it.isNotEmpty() }
+            } finally {
+                bitmap.recycle()
+            }
+        }.getOrNull()
+    }
+
     fun count(context: Context): Int =
         runCatching { dirOf(context).listFiles()?.size ?: 0 }.getOrDefault(0)
 

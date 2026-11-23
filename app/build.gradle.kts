@@ -12,11 +12,11 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.sonance.player"
+        applicationId = "com.huawei.music.byd"
         minSdk = 24
         targetSdk = 35
-        versionCode = 17
-        versionName = "2.5.5"
+        versionCode = 24
+        versionName = "2.6.6"
         resourceConfigurations += listOf("zh", "en")
     }
 

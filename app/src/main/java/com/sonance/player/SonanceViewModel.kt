@@ -51,6 +51,9 @@ import com.sonance.player.data.NeteaseSource
 import com.sonance.player.data.OnlineMode
 import com.sonance.player.data.OnlineSource
 import com.sonance.player.data.OnlineSources
+import com.sonance.player.data.huawei.HuaweiAuth
+import com.sonance.player.data.huawei.HuaweiCache
+import com.sonance.player.data.huawei.HuaweiSource
 import com.sonance.player.data.SafScanTree
 import com.sonance.player.data.lx.LxBoard
 import com.sonance.player.data.lx.LxCatalogProvider
@@ -332,7 +335,7 @@ class SonanceViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var viewMode by mutableStateOf(runCatching { ViewMode.valueOf(prefs.viewMode) }.getOrDefault(ViewMode.LIST))
         private set
-    var tab by mutableStateOf(LibraryTab.fromId(prefs.lastTab))
+    var tab by mutableStateOf(LibraryTab.ONLINE)
         private set
     var searchQuery by mutableStateOf("")
         private set
@@ -998,6 +1001,10 @@ class SonanceViewModel(app: Application) : AndroidViewModel(app) {
     var neteaseAccount by mutableStateOf(NeteaseAuth.ensureLoaded(getApplication()))
         private set
 
+    /** 华为音乐账号；在线源切到华为后，UI 仍用 [neteaseAccount] 作为“已登录”载体。 */
+    var huaweiAccount by mutableStateOf<HuaweiAuth.Account?>(null)
+        private set
+
     /** 设置里的播放音质档位。下载跟随它 —— 定过的交互是「听什么存什么」 */
     var onlineQuality by mutableStateOf(NeteaseLevel.fromId(prefs.onlineQuality))
         private set
@@ -1421,6 +1428,17 @@ class SonanceViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     init {
+        HuaweiAuth.init(getApplication())
+        HuaweiCache.init(getApplication())
+        huaweiAccount = HuaweiAuth.account
+        huaweiAccount?.let { h ->
+            if (neteaseAccount == null) {
+                neteaseAccount = NeteaseAccount(
+                    musicU = "huawei", csrf = "", userId = h.savedAtMs / 1000,
+                    nickname = h.nickname, avatarUrl = "", vipType = 11, savedAtMs = h.savedAtMs
+                )
+            }
+        }
         // 收听时长记账：只在曲目或播放态变更时按 elapsedRealtime 结算，
         // 应用在后台暂停 500ms UI 轮询时照常精确计时，暂停态零定时唤醒。
         viewModelScope.launch {
@@ -2337,7 +2355,7 @@ class SonanceViewModel(app: Application) : AndroidViewModel(app) {
      * 原来这里会触发一次全量重扫（用户没有选扫描范围时 folderPaths=null），
      * 界面先进入扫描态、整库重新过滤分组一遍，只为多出一首歌 —— 太重了。
      *
-     * 现在只扫两个产出目录（在线下载的「山水有清音下载」、网易云缓存转换的
+     * 现在只扫两个产出目录（在线下载的「华为音乐下载」、网易云缓存转换的
      * 「本机缓存转换」），把库里还没有的新歌**直接追加**进全部列表：
      * 不进扫描态、不动已有条目、封面缓存不清 —— 用户下载完立刻就能在
      * 「全部歌曲 / 文件夹」里看到新歌。
@@ -4366,6 +4384,11 @@ class SonanceViewModel(app: Application) : AndroidViewModel(app) {
                 } else emptySet()
                 val nextLocalFavs = prefs.favorites - linkedLocalIds - titleArtistMatchedIds
                 syncFavoritesState(nextLocalFavs, nextOnlineFavs)
+                matchedEntries.firstOrNull { it.song.source == "huawei" }?.song?.remoteId?.let { remoteId ->
+                    viewModelScope.launch(Dispatchers.IO) {
+                        HuaweiSource.setFavorite(remoteId, false)
+                    }
+                }
                 showToast("已取消收藏")
                 return false
             }
@@ -4388,6 +4411,13 @@ class SonanceViewModel(app: Application) : AndroidViewModel(app) {
                 localSongId = existingLocal?.id ?: 0L
             )
             onlineSongMap[song.id] = song
+            if (song.source == "huawei") {
+                song.remoteId?.takeIf { it.isNotBlank() }?.let { remoteId ->
+                    viewModelScope.launch(Dispatchers.IO) {
+                        HuaweiSource.setFavorite(remoteId, true)
+                    }
+                }
+            }
 
             if (existingLocal != null) {
                 val nextLocalFavs = prefs.favorites + existingLocal.id
@@ -4763,7 +4793,7 @@ class SonanceViewModel(app: Application) : AndroidViewModel(app) {
 
     /**
      * [maybeDownload]、播放主界面下载按钮与「在线收藏同时下载」共用的唯一取流落盘通道：
-     * 走与播放相同的 [OnlineSource.resolveStream] 播放流接口，跳过 30 秒试听残曲并写入「山水有清音下载」。
+     * 走与播放相同的 [OnlineSource.resolveStream] 播放流接口，跳过 30 秒试听残曲并写入「华为音乐下载」。
      */
     private suspend fun executeOnlineDownload(
         song: Song,
@@ -4929,7 +4959,37 @@ class SonanceViewModel(app: Application) : AndroidViewModel(app) {
         loadOnlineHome(force = true)
     }
 
+    /** Blocking token exchange; the login sheet calls this after intercepting hms://redirect_uri. */
+    suspend fun completeHuaweiLogin(callback: String): String? = withContext(Dispatchers.IO) {
+        runCatching {
+            val account = HuaweiAuth.complete(getApplication(), callback)
+            withContext(Dispatchers.Main) {
+                huaweiAccount = account
+                neteaseAccount = NeteaseAccount(
+                    musicU = "huawei", csrf = "", userId = account.savedAtMs / 1000,
+                    nickname = account.nickname, avatarUrl = "", vipType = 11, savedAtMs = account.savedAtMs
+                )
+                loadRecommendedPlaylists()
+                loadOnlineHome(force = true)
+                showToast("已登录华为音乐")
+            }
+            null
+        }.getOrElse { it.message ?: "华为账号登录失败" }
+    }
+
+    fun logoutHuawei() {
+        HuaweiAuth.logout(getApplication())
+        huaweiAccount = null
+        if (neteaseAccount?.musicU == "huawei") neteaseAccount = null
+        clearOnlineHome()
+        showToast("已退出华为音乐账号")
+    }
+
     fun logoutNetease() {
+        if (huaweiAccount != null) {
+            logoutHuawei()
+            return
+        }
         NeteaseAuth.logout(getApplication())
         neteaseAccount = null
         NeteaseStream.clearCache()
@@ -6384,6 +6444,42 @@ class SonanceViewModel(app: Application) : AndroidViewModel(app) {
     fun loadOnlineHome(force: Boolean = false) {
         if (!onlineMusicEnabled) return
         val acc = neteaseAccount ?: return
+        if (onlineSource?.id == "huawei") {
+            val alreadyLoaded = onlineHomeLoadedForUid == acc.userId &&
+                (onlineDailyTracks.isNotEmpty() || onlineUserPlaylists.isNotEmpty() || onlineLikedPlaylist != null)
+            if (!force && (onlineHomeLoading || alreadyLoaded)) return
+            onlineHomeJob?.cancel()
+            onlineHomeJob = viewModelScope.launch {
+                onlineHomeLoading = true
+                try {
+                    // 收藏 / 历史 / 个人歌单先并行拿，日推会复用它们做口味画像。
+                    val accountData = withContext(Dispatchers.IO) {
+                        coroutineScope {
+                            val fav = async { HuaweiSource.favoriteTracks() }
+                            val history = async { HuaweiSource.historyTracks() }
+                            val lists = async { HuaweiSource.userPlaylists() }
+                            Triple(fav.await(), history.await(), lists.await())
+                        }
+                    }
+                    val (fav, history, lists) = accountData
+                    val daily = withContext(Dispatchers.IO) { HuaweiSource.dailyRecommendations() }.orEmpty()
+                    val charts = withContext(Dispatchers.IO) { HuaweiSource.chartPlaylists() }.orEmpty()
+                    if (neteaseAccount?.userId != acc.userId) return@launch
+                    onlineLikedPlaylist = fav?.takeIf { it.isNotEmpty() }
+                        ?.let { HuaweiSource.likedPlaylistOf(it) }
+                    onlineUserPlaylists = buildList {
+                        if (!history.isNullOrEmpty()) add(HuaweiSource.historyPlaylistOf(history))
+                        addAll(lists.orEmpty())
+                    }
+                    onlineDailyTracks = daily
+                    onlineToplists = charts
+                    onlineHomeLoadedForUid = acc.userId
+                } finally {
+                    onlineHomeLoading = false
+                }
+            }
+            return
+        }
         val alreadyLoaded = onlineHomeLoadedForUid == acc.userId &&
             (onlineDailyTracks.isNotEmpty() || onlineUserPlaylists.isNotEmpty() || onlineLikedPlaylist != null)
         if (!force && (onlineHomeLoading || alreadyLoaded)) return
@@ -6413,17 +6509,30 @@ class SonanceViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun dailyRecommendPlaylist(): RemotePlaylist = RemotePlaylist(
+    fun dailyRecommendPlaylist(): RemotePlaylist {
+        if (onlineSource?.id == "huawei") return HuaweiSource.dailyPlaylistOf(onlineDailyTracks)
+        return RemotePlaylist(
         remoteId = NeteaseExplore.DAILY_RECOMMEND_PLAYLIST_ID,
         name = "每日私人推荐",
         coverUrl = onlineDailyTracks.firstOrNull { !it.coverUrl.isNullOrBlank() }?.coverUrl,
         trackCount = onlineDailyTracks.size,
         creatorName = neteaseAccount?.nickname?.takeIf { it.isNotBlank() } ?: "专属口味"
-    )
+        )
+    }
 
     fun playDailyRecommend() {
         val acc = neteaseAccount ?: return
         if (!onlineMusicEnabled) return
+        if (onlineSource?.id == "huawei") {
+            viewModelScope.launch {
+                val tracks = onlineDailyTracks.ifEmpty {
+                    withContext(Dispatchers.IO) { HuaweiSource.dailyRecommendations() }.orEmpty()
+                        .also { if (it.isNotEmpty()) onlineDailyTracks = it }
+                }
+                playRemoteTrackBatch(tracks, emptyMessage = "今日推荐暂时不可用，稍后再试")
+            }
+            return
+        }
         viewModelScope.launch {
             val tracks = onlineDailyTracks.ifEmpty {
                 withContext(Dispatchers.IO) { NeteaseExplore.fetchDailyRecommend(acc) }.orEmpty()
@@ -6436,6 +6545,18 @@ class SonanceViewModel(app: Application) : AndroidViewModel(app) {
     fun playPersonalFm() {
         val acc = neteaseAccount ?: return
         if (!onlineMusicEnabled) return
+        if (onlineSource?.id == "huawei") {
+            viewModelScope.launch {
+                showToast("正在根据收藏与歌单生成猜你喜欢…")
+                val tracks = withContext(Dispatchers.IO) { HuaweiSource.guessYouLike() }
+                if (tracks == null) {
+                    showToast("猜你喜欢生成失败，检查网络后重试")
+                    return@launch
+                }
+                playRemoteTrackBatch(tracks, emptyMessage = "猜你喜欢暂无可播曲目")
+            }
+            return
+        }
         viewModelScope.launch {
             val tracks = withContext(Dispatchers.IO) { NeteaseExplore.fetchPersonalFm(acc) }
             if (tracks == null) {
@@ -6452,7 +6573,11 @@ class SonanceViewModel(app: Application) : AndroidViewModel(app) {
     /** 开启网易云「心动模式」：以红心歌单和种子曲目驱动相似雷达推荐队列。 */
     fun playIntelligenceMode(seedTrackId: String? = null) {
         val acc = neteaseAccount ?: run {
-            showToast("请先登录网易云账号后使用心动模式")
+            showToast("请先登录华为音乐账号后使用心动模式")
+            return
+        }
+        if (onlineSource?.id == "huawei") {
+            playPersonalFm()
             return
         }
         if (!onlineMusicEnabled || intelligenceLoading) return
@@ -6502,18 +6627,24 @@ class SonanceViewModel(app: Application) : AndroidViewModel(app) {
             showToast(emptyMessage)
             return false
         }
+        // 必须用**当前音源**建映射、入队。原来这里写死成 NeteaseSource，华为的曲目
+        // 被塞进网易云的 ID 空间，队列里的歌和实际解析流对不上 —— 表现就是播放错乱。
+        val src = onlineSource ?: run {
+            showToast("没有可用的音源")
+            return false
+        }
         val playable = tracks.filter { it.playable }
         if (playable.isEmpty()) {
             showToast("当前列表里的歌曲需要会员或暂无音源")
             return false
         }
-        commitOnlinePage(NeteaseSource, playable)
-        val onlineSongs = playable.mapNotNull { onlineSongMap[remoteSongId(NeteaseSource.id, it.remoteId)] }
+        commitOnlinePage(src, playable)
+        val onlineSongs = playable.mapNotNull { onlineSongMap[remoteSongId(src.id, it.remoteId)] }
         if (onlineSongs.isEmpty()) {
             showToast(emptyMessage)
             return false
         }
-        return playOnlineQueue(NeteaseSource, onlineSongs, 0, onlineSongs.first().title)
+        return playOnlineQueue(src, onlineSongs, 0, onlineSongs.first().title)
     }
 
     // ---- 歌单详情 ----

@@ -459,12 +459,18 @@ class PlayerController(private val context: Context) {
      */
     fun refreshCurrentArtwork(song: Song) {
         val wanted = song.artworkUri(context)
+        // 车机仪表盘可能没有 FileProvider 的 URI 授权，必须把封面缩略图直接放进
+        // MediaMetadata.artworkData，让系统通过 Binder 拿到字节，而不是去读 content://。
+        val artworkBytes = CoverCache.artworkData(context, OnlineCover.keyOf(song.title, song.artist))
         updateCurrentMediaMetadata(
             expectedMediaId = song.id,
             logTag = "SonanceCover",
             failPrefix = "刷新通知栏封面失败"
         ) { current ->
-            if (current.mediaMetadata.artworkUri == wanted) return@updateCurrentMediaMetadata null
+            val alreadyHasData = current.mediaMetadata.artworkData != null
+            if (current.mediaMetadata.artworkUri == wanted && (artworkBytes == null || alreadyHasData)) {
+                return@updateCurrentMediaMetadata null
+            }
             // 只原地更新 metadata（封面与标签），保留当前 MediaItem 已经解析好的播放流地址，
             // 避免 onlineSongMap 里的兜底外链（outer/url 30s 试听）把正在播的无损流顶掉。
             val extras = android.os.Bundle(current.mediaMetadata.extras ?: android.os.Bundle()).apply {
@@ -475,6 +481,7 @@ class PlayerController(private val context: Context) {
                 .setArtist(song.artist)
                 .setAlbumTitle(song.album)
                 .setArtworkUri(wanted)
+                .setArtworkData(artworkBytes, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
                 .setExtras(extras)
                 .build()
         }

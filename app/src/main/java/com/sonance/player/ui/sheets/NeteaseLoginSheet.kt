@@ -438,7 +438,7 @@ fun NeteaseAccountSheet(
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        account.nickname.ifBlank { "网易云用户" },
+                        account.nickname.ifBlank { "华为音乐" },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = skin.text,
@@ -447,7 +447,7 @@ fun NeteaseAccountSheet(
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        if (account.isVip) "黑胶 VIP · 已解锁无损与会员曲库" else "普通账号 · 最高支持极高 320k",
+                        if (account.isVip) "华为音乐 · 已登录" else "已登录华为音乐",
                         style = MaterialTheme.typography.labelSmall,
                         color = if (account.isVip) skin.accent else skin.textMuted
                     )

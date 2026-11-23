@@ -82,7 +82,7 @@ import com.sonance.player.ui.components.hapticTick
 import com.sonance.player.ui.components.rememberRemoteCover
 import com.sonance.player.ui.icon.SonanceIcons
 import com.sonance.player.ui.sheets.NeteaseAccountSheet
-import com.sonance.player.ui.sheets.NeteaseLoginSheet
+import com.sonance.player.ui.sheets.HuaweiLoginSheet
 import com.sonance.player.ui.theme.LocalSkin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -231,7 +231,7 @@ fun OnlineScreen(
         }
 
         if (showLoginSheet) {
-            NeteaseLoginSheet(
+            HuaweiLoginSheet(
                 vm = vm,
                 onDismiss = { showLoginSheet = false }
             )
@@ -565,7 +565,7 @@ private fun SingleSearchBody(
                             // 未登录时"VIP 歌播不了"是常态，登录后还播不了一般是版权问题
                             Text(
                                 text = if (vm.neteaseAccount == null) {
-                                    "标 VIP 的歌需要登录网易云会员账号才能播放，点右上角「登录网易云」即可登录。"
+                                    "标 VIP 的歌需要登录华为音乐会员账号才能播放，点右上角「登录华为音乐」即可登录。"
                                 } else {
                                     "标 VIP 的歌已按你的会员权益判断；灰掉的是当前账号仍拿不到地址的（下架或需单独购买）。"
                                 },
@@ -702,7 +702,7 @@ private fun PlaylistSearchBody(
 }
 
 /**
- * 在线页右上角（对齐下方「只看可播」开关）：未登录显示「登录网易云 ▾」，已登录显示头像 + 昵称 + VIP 徽标。
+ * 在线页右上角（对齐下方「只看可播」开关）：未登录显示「登录华为音乐 ▾」，已登录显示头像 + 昵称 + VIP 徽标。
  */
 @Composable
 private fun OnlineAccountActionPill(
@@ -728,7 +728,7 @@ private fun OnlineAccountActionPill(
                     .background(skin.accent)
             )
             Text(
-                text = "登录网易云 ▾",
+                text = "登录华为音乐 ▾",
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = skin.accent,
@@ -764,7 +764,7 @@ private fun OnlineAccountActionPill(
                     )
                 } else {
                     Text(
-                        text = account.nickname.take(1).ifBlank { "云" },
+                        text = account.nickname.take(1).ifBlank { "华" },
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = skin.textMuted
@@ -772,7 +772,7 @@ private fun OnlineAccountActionPill(
                 }
             }
             Text(
-                text = account.nickname.ifBlank { "网易云" },
+                text = account.nickname.ifBlank { "华为音乐" },
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = skin.text,
@@ -1081,7 +1081,7 @@ private fun LoggedInHeroHome(
                                 )
                                 Spacer(Modifier.height(2.dp))
                                 Text(
-                                    text = likedPlaylist?.let { "${it.trackCount} 首红心单曲" }
+                                    text = likedPlaylist?.let { "${it.trackCount} 首收藏歌曲" }
                                         ?: if (vm.onlineHomeLoading) "同步歌单中…" else "点击同步歌单",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color.White.copy(alpha = 0.78f),
@@ -1151,7 +1151,7 @@ private fun LoggedInHeroHome(
                                 .padding(horizontal = 5.dp, vertical = 1.dp)
                         ) {
                             Text(
-                                text = "FM RADIO",
+                                text = "FOR YOU",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 9.sp
@@ -1170,7 +1170,7 @@ private fun LoggedInHeroHome(
                         )
                         Column(Modifier.align(Alignment.BottomStart)) {
                             Text(
-                                text = "私人 FM",
+                                text = "猜你喜欢",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
@@ -1178,7 +1178,7 @@ private fun LoggedInHeroHome(
                             )
                             Spacer(Modifier.height(2.dp))
                             Text(
-                                text = "无限漫游 · 顺耳电台",
+                                text = "按收藏口味精选",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color.White.copy(alpha = 0.72f),
                                 maxLines = 1,
@@ -1240,7 +1240,7 @@ private fun LoggedInHeroHome(
                             .padding(horizontal = 14.dp, vertical = 14.dp)
                     ) {
                         Text(
-                            text = if (vm.onlineHomeLoading) "正在从网易云同步你的歌单…" else "暂无同步到个人歌单，点击右上角账号可重新登录或刷新",
+                            text = if (vm.onlineHomeLoading) "正在从华为音乐同步你的歌单…" else "暂无华为音乐歌单，点击右上角账号可重新登录或刷新",
                             style = MaterialTheme.typography.bodySmall,
                             color = skin.textMuted
                         )

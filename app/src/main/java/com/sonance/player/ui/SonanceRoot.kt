@@ -6,6 +6,7 @@ import com.sonance.player.ui.screens.DlnaHubScreen
 import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Build
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -636,6 +637,17 @@ private fun Shell(vm: SonanceViewModel, playerState: PlayerUiState) {
     val configuration = LocalConfiguration.current
     val layout = resolveLayout(configuration.screenWidthDp, configuration.screenHeightDp)
 
+    // 横屏/平板默认落在在线音乐：首次以横屏启动，或从竖屏转成横屏时切到在线页。
+    // 之后用户自己切走不会被强行拉回（只在方向变化的那一次触发）。
+    var previousLandscape by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(configuration.orientation) {
+        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        if (isLandscape && previousLandscape != true) {
+            vm.selectTab(LibraryTab.ONLINE)
+        }
+        previousLandscape = isLandscape
+    }
+
     // 冷启动首帧即播放页：开关打开时**第一帧就是展开态**（sheetProgress 直接=1，无展开动画），
     // 关闭时第一帧就是列表。用 remember 而非 rememberSaveable：每次进程启动都重新读开关，
     // 保证「进入应用」永远落在开关指定的页面，而不是上次的残留状态。
@@ -790,7 +802,9 @@ private fun Shell(vm: SonanceViewModel, playerState: PlayerUiState) {
 
     BackHandler(enabled = fullPlayerOpen) { fullPlayerOpen = false }
     BackHandler(enabled = !fullPlayerOpen && detail != null) { detail = null }
-    // 设置页 / 在线音乐页 / 文件夹页按返回 → 回主页面（「全部歌曲」），而不是直接退出应用。
+    // 设置页 / 文件夹页按返回 → 回主页面（「全部歌曲」），而不是直接退出应用。
+    // **在线音乐页例外**：在线音乐是独立入口，按返回不应掉回本地音乐，
+    // 这里不注册 BackHandler，交给系统直接退出应用；退出在线页只能用右上角的 ✕。
     // 歌单页不在此列：它已是曲库 Pager 的第四页，返回行为与全部/最近/收藏一致；
     // 歌单详情的返回由 UserPlaylistDetailScreen 自己的 BackHandler 处理。
     //
@@ -799,7 +813,7 @@ private fun Shell(vm: SonanceViewModel, playerState: PlayerUiState) {
     // 详情页的返回优先级要高于这些顶层页面。
     BackHandler(
         enabled = !fullPlayerOpen && detail == null &&
-            (vm.tab == LibraryTab.SETTINGS || vm.tab == LibraryTab.ONLINE ||
+            (vm.tab == LibraryTab.SETTINGS ||
                 vm.tab == LibraryTab.FOLDERS ||
                 vm.tab == LibraryTab.STATS)
     ) {
@@ -1547,8 +1561,6 @@ private fun CompactLayout(
     val skin = LocalSkin.current
     // 「视图」弹层：专辑 / 艺术家 / 文件夹 —— 从底栏下沉到这里
     var showViewSheet by remember { mutableStateOf(false) }
-    // 双击顶栏标题 / logo 弹出的「应用名 + 桌面图标」编辑面板
-    var showBrandEditor by remember { mutableStateOf(false) }
 
     // 悬浮卡片要叠在内容上：内容按卡片高度让出一条底边距，
     // 免得列表最后一行被卡片压住（贴底通栏本来就在内容下面，不需要让）
@@ -1579,27 +1591,21 @@ private fun CompactLayout(
                 // 主页面标题固定成**应用名**：原来跟着页签换（"全部歌曲 · 共 N 首 ·
                 // 21 小时"），每切一次页文字都在变，顶栏永远没有稳定锚点。
                 // 详情页仍是专辑/艺术家名 —— 那是"我在看什么"的位置指示。
-                title = detail?.let { detailTitle(vm, it) } ?: vm.appDisplayName,
+                title = detail?.let { detailTitle(vm, it) } ?: vm.tab.label,
                 subtitle = detail?.let { detailSubtitle(vm, it) } ?: tabSubtitle(vm),
                 // 列表页把统计并进标题行（省一整行）；详情页标题可能是长专辑名，
                 // 挤一行会把标题截没，所以保持两行
                 subtitleInline = detail == null,
                 modifier = Modifier.statusBarsPadding(),
-                // 双击标题/logo → 改应用名、换**顶栏图标**（不是桌面图标）
-                onTitleDoubleTap = if (detail == null) {
-                    { showBrandEditor = true }
-                } else null,
-                logoId = vm.topBarLogoId,
-                // 图标选「无」时左上角那块透明区域单击进设置（不至于把入口弄丢）
-                onLogoClick = {
-                    vm.selectTab(LibraryTab.SETTINGS)
-                    onCloseDetail()
-                },
+                // 左上角不再显示应用名/图标，也不提供改名入口
+                logoId = "none",
+                onTitleDoubleTap = null,
+                onLogoClick = null,
                 // 不给返回键，用户只能再点一次 ▤ 才能回曲库，等于走进死胡同
                 onBack = when {
                     detail != null -> { { onCloseDetail() } }
                     vm.tab == LibraryTab.ALBUMS || vm.tab == LibraryTab.ARTISTS ||
-                        vm.tab == LibraryTab.FOLDERS || vm.tab == LibraryTab.ONLINE ||
+                        vm.tab == LibraryTab.FOLDERS ||
                         vm.tab == LibraryTab.STATS ->
                         { { vm.selectTab(LibraryTab.SONGS) } }
                     // 歌单已是曲库 Pager 的第四页：列表态和其它三页一样不给返回键，
@@ -1856,10 +1862,6 @@ private fun CompactLayout(
                 }
             )
         }
-    }
-
-    if (showBrandEditor) {
-        BrandEditorDialog(vm = vm, onDismiss = { showBrandEditor = false })
     }
 }
 
@@ -2265,6 +2267,9 @@ private fun MediumLayout(
             favoriteCount = vm.favorites.size,
             storageText = "",
             storageFraction = 0f,
+            appName = "",
+            logoId = "none",
+            onBrandDoubleTap = null,
             // 沉浸皮肤下侧栏也半透明，与右侧面板同一层背景；系统栏内边距由侧栏内部处理
             translucent = skin.immersive,
             dlnaVisible = true,
@@ -2283,12 +2288,22 @@ private fun MediumLayout(
                     // 挤一行会把标题截没，所以保持两行
                     subtitleInline = detail == null,
                     modifier = Modifier.statusBarsPadding(),
+                    logoId = "none",
+                    onTitleDoubleTap = null,
+                    onLogoClick = null,
                     onBack = detail?.let { { onCloseDetail() } },
                     // 同上：刷新不再占顶栏的位置；只留封面墙一个沉浸入口
                     actions = {
-                        if (detail == null && vm.tab != LibraryTab.SETTINGS &&
-                            vm.tab != LibraryTab.ONLINE
-                        ) {
+                        if (detail == null && vm.tab == LibraryTab.ONLINE) {
+                            // 在线音乐页没有返回箭头，退出在线页只走右上角这个 ✕。
+                            IconAction(
+                                icon = SonanceIcons.Close,
+                                contentDescription = "关闭在线音乐",
+                                onClick = { vm.selectTab(LibraryTab.SONGS) },
+                                iconSize = 19.dp,
+                                tint = skin.text
+                            )
+                        } else if (detail == null && vm.tab != LibraryTab.SETTINGS) {
                             IconAction(
                                 icon = SonanceIcons.CoverWall,
                                 contentDescription = "封面墙",
@@ -2383,8 +2398,6 @@ private fun ExpandedLayout(
     val configuration = LocalConfiguration.current
     val wide = configuration.screenWidthDp >= 1200
 
-    // 双击左上角品牌块 = 手机「双击顶栏标题」的等价入口（改应用名 / 换顶栏图标）
-    var showBrandEditor by remember { mutableStateOf(false) }
     // 悬浮迷你播放卡：设置里选「悬浮」档时，平板也用它，而不是底部通栏
     val floating = vm.miniPlayerStyle == MiniPlayerStyle.FLOAT
     var miniBarHeightPx by remember { mutableStateOf(0) }
@@ -2414,9 +2427,9 @@ private fun ExpandedLayout(
             dlnaVisible = true,
             dlnaSelected = detail is Detail.Dlna,
             onOpenDlna = { onOpenDetail(Detail.Dlna) },
-            appName = vm.appDisplayName,
-            logoId = vm.topBarLogoId,
-            onBrandDoubleTap = { showBrandEditor = true },
+            appName = "",
+            logoId = "none",
+            onBrandDoubleTap = null,
             // 沉浸皮肤下侧栏也半透明，与右侧面板同一层背景；系统栏内边距由侧栏内部处理
             translucent = skin.immersive,
             modifier = Modifier
@@ -2438,21 +2451,23 @@ private fun ExpandedLayout(
                         // 挤一行会把标题截没，所以保持两行
                         subtitleInline = detail == null,
                         onBack = detail?.let { { onCloseDetail() } },
-                        // 和手机同一条规则：双击标题 = 改应用名 / 换顶栏图标
-                        logoId = vm.topBarLogoId,
-                        onTitleDoubleTap = if (detail == null) {
-                            { showBrandEditor = true }
-                        } else null,
-                        onLogoClick = {
-                            vm.selectTab(LibraryTab.SETTINGS)
-                            onCloseDetail()
-                        },
+                        // 左上角不显示应用名/图标，也不提供改名入口
+                        logoId = "none",
+                        onTitleDoubleTap = null,
+                        onLogoClick = null,
                         // 刷新图标去掉了：列表页有下拉刷新，其它页面走「设置 → 重新扫描」。
                         // 顶栏只留真正一步到不了的入口，图标多了反而每个都不像入口。
                         actions = {
-                            if (detail == null && vm.tab != LibraryTab.SETTINGS &&
-                                vm.tab != LibraryTab.ONLINE
-                            ) {
+                            if (detail == null && vm.tab == LibraryTab.ONLINE) {
+                                // 在线音乐页没有返回箭头，退出在线页只走右上角这个 ✕。
+                                IconAction(
+                                    icon = SonanceIcons.Close,
+                                    contentDescription = "关闭在线音乐",
+                                    onClick = { vm.selectTab(LibraryTab.SONGS) },
+                                    iconSize = 19.dp,
+                                    tint = skin.text
+                                )
+                            } else if (detail == null && vm.tab != LibraryTab.SETTINGS) {
                                 IconAction(
                                     icon = SonanceIcons.CoverWall,
                                     contentDescription = "封面墙",
@@ -2601,10 +2616,6 @@ private fun ExpandedLayout(
                 Box(Modifier.navigationBarsPadding())
             }
         }
-    }
-
-    if (showBrandEditor) {
-        BrandEditorDialog(vm = vm, onDismiss = { showBrandEditor = false })
     }
 }
 

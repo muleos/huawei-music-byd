@@ -4,6 +4,7 @@ import android.net.Uri
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.sonance.player.data.huawei.HuaweiSource
 import com.sonance.player.data.netease.NeteaseAuth
 import com.sonance.player.data.netease.NeteaseQuality
 import com.sonance.player.data.netease.NeteaseStream
@@ -547,7 +548,7 @@ object OnlineSources {
     @Volatile
     private var lxSources: List<OnlineSource> = emptyList()
 
-    val all: List<OnlineSource> get() = listOf(NeteaseSource)
+    val all: List<OnlineSource> get() = listOf(HuaweiSource)
 
     fun byId(id: String?): OnlineSource? =
         all.firstOrNull { it.id == id } ?: lxSources.firstOrNull { it.id == id }

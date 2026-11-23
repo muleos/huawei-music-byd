@@ -24,8 +24,8 @@ object LocalCacheRules {
     private val EXCLUDED_SEGMENTS = listOf(
         "/$STANDALONE_FOLDER_NAME",
         "\\$STANDALONE_FOLDER_NAME",
-        "/山水有清音下载",
-        "\\山水有清音下载",
+        "/华为音乐下载",
+        "\\华为音乐下载",
         "netease_cache",
         "local_cache_work",
         "cover_cache",

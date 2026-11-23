@@ -26,7 +26,7 @@
             android:maxWidth="340dp"
             android:singleLine="true"
             android:ellipsize="end"
-            android:text="山水有清音 桌面歌词"
+            android:text="华为音乐 桌面歌词"
             android:textColor="#FFFFFFFF"
             android:textSize="18sp"
             android:textStyle="bold"

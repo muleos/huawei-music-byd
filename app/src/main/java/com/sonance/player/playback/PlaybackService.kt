@@ -362,7 +362,7 @@ class PlaybackService : MediaLibraryService() {
                     .setMediaId(LIBRARY_ROOT_ID)
                     .setMediaMetadata(
                         MediaMetadata.Builder()
-                            .setTitle("山水有清音")
+                            .setTitle("华为音乐")
                             .setIsBrowsable(true)
                             .setIsPlayable(false)
                             .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
@@ -985,6 +985,15 @@ class PlaybackService : MediaLibraryService() {
         // 车载蓝牙歌词：息屏也要继续刷新（车机显示不依赖手机屏幕状态）
         maybeUpdateCarLyricTitle(player, triplet)
 
+        // 比亚迪仪表盘：进度条/播放时间每秒推进；若切歌时还没拿到音频焦点，这里会补送歌曲信息
+        runCatching {
+            BydInstrumentReporter.reportProgress(
+                applicationContext,
+                posMs,
+                player.duration.takeIf { it > 0L } ?: 0L
+            )
+        }
+
         // 小米超级岛歌词：岛 / AOD 同样不依赖亮屏
         XiaomiLyricIsland.onTick(applicationContext, query.title, query.artist, triplet)
 
@@ -1063,6 +1072,18 @@ class PlaybackService : MediaLibraryService() {
                 ?: extras?.getLong(PlayerController.EXTRA_DURATION_MS, 0L)?.takeIf { it > 0L }
                 ?: 0L
             activeTrackIdentity = trackPartOfLyricKey(mediaId, title, artist)
+            // 比亚迪仪表盘：切歌时把歌名/歌手/专辑/时长 + MediaSession 里的封面字节上报。
+            // 反射失败或车型 ACL 拒绝都在 reporter 内静默降级，不影响播放。
+            runCatching {
+                BydInstrumentReporter.reportSong(
+                    context = applicationContext,
+                    title = title,
+                    artist = artist,
+                    album = meta?.albumTitle?.toString().orEmpty(),
+                    durationMs = durationMs,
+                    coverBytes = meta?.artworkData
+                )
+            }
             val snapshot = WidgetSyncSnapshot(
                 mediaId = mediaId,
                 title = title,
@@ -1093,6 +1114,7 @@ class PlaybackService : MediaLibraryService() {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             mainHandler.removeCallbacks(playbackTicker)
             syncShakeListener()
+            runCatching { BydInstrumentReporter.reportState(applicationContext, isPlaying) }
             val p = mediaSession?.player ?: return
             if (isPlaying) {
                 tickLive()
@@ -1950,6 +1972,7 @@ class PlaybackService : MediaLibraryService() {
     }
 
     override fun onDestroy() {
+        runCatching { BydInstrumentReporter.reportStop(applicationContext) }
         pendingOnlineLyricJob?.cancel()
         pendingOnlineLyricJob = null
         lyricScope.coroutineContext[kotlinx.coroutines.Job]?.cancel()

@@ -547,7 +547,7 @@ object DesktopLyricsManager {
         val cur = lyricTriplet.cur.ifBlank {
             if (title.isNotBlank()) {
                 if (artist.isNotBlank()) "$title · $artist" else title
-            } else "山水有清音"
+            } else "华为音乐"
         }
         val next = lyricTriplet.next
 

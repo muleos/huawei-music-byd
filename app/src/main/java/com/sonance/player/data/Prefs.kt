@@ -277,7 +277,7 @@ class Prefs(context: Context) {
         set(v) = sp.edit().putString(KEY_VIEW, v).apply()
 
     var lastTab: String
-        get() = sp.getString(KEY_TAB, LibraryTab.SONGS.id) ?: LibraryTab.SONGS.id
+        get() = sp.getString(KEY_TAB, LibraryTab.ONLINE.id) ?: LibraryTab.ONLINE.id
         set(v) = sp.edit().putString(KEY_TAB, v).apply()
 
     /** 上次打开的文件夹路径（冷启动恢复文件夹详情用）；null 表示没有打开的文件夹。 */
@@ -292,7 +292,7 @@ class Prefs(context: Context) {
      * 关掉它的人通常更想一进来就浏览曲库。
      */
     var openPlayerOnLaunch: Boolean
-        get() = sp.getBoolean(KEY_OPEN_PLAYER_ON_LAUNCH, true)
+        get() = sp.getBoolean(KEY_OPEN_PLAYER_ON_LAUNCH, false)
         set(v) = sp.edit().putBoolean(KEY_OPEN_PLAYER_ON_LAUNCH, v).apply()
 
     /**

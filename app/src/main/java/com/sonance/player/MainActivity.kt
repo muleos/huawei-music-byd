@@ -12,7 +12,7 @@ import androidx.lifecycle.lifecycleScope
 import com.sonance.player.ui.SonanceRoot
 import kotlinx.coroutines.launch
 
-class MainActivity : ComponentActivity() {
+open class MainActivity : ComponentActivity() {
 
     /**
      * 提到 Activity 字段上，`onStop` 里才能拿到它。

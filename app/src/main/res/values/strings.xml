@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">山水有清音</string>
+    <string name="app_name">华为音乐</string>
     <string name="app_slogan">本地音乐播放器</string>
 
     <!-- ===== 桌面小组件（共 10 套：5 列保留 + 4 列新增） ===== -->
     <!-- 5 列系列（保留） -->
-    <string name="widget_label_bar">山水有清音 · 横向控制条 5×1</string>
-    <string name="widget_label_card">山水有清音 · 封面卡片 3×2</string>
-    <string name="widget_label_wide">山水有清音 · 信息宽卡 5×2</string>
-    <string name="widget_label_minimal">山水有清音 · 极简横条 3×1</string>
-    <string name="widget_label_large">山水有清音 · 大幅卡片 5×4</string>
+    <string name="widget_label_bar">华为音乐 · 横向控制条 5×1</string>
+    <string name="widget_label_card">华为音乐 · 封面卡片 3×2</string>
+    <string name="widget_label_wide">华为音乐 · 信息宽卡 5×2</string>
+    <string name="widget_label_minimal">华为音乐 · 极简横条 3×1</string>
+    <string name="widget_label_large">华为音乐 · 大幅卡片 5×4</string>
 
     <!-- 4 列系列（新增） -->
-    <string name="widget_label_bar_4">山水有清音 · 横向控制条 4×1（4列）</string>
-    <string name="widget_label_card_4">山水有清音 · 封面方卡 2×2（4列）</string>
-    <string name="widget_label_wide_4">山水有清音 · 信息宽卡 4×2（4列）</string>
-    <string name="widget_label_minimal_4">山水有清音 · 极简条 2×1（4列）</string>
-    <string name="widget_label_large_4">山水有清音 · 大幅卡片 4×4（4列）</string>
+    <string name="widget_label_bar_4">华为音乐 · 横向控制条 4×1（4列）</string>
+    <string name="widget_label_card_4">华为音乐 · 封面方卡 2×2（4列）</string>
+    <string name="widget_label_wide_4">华为音乐 · 信息宽卡 4×2（4列）</string>
+    <string name="widget_label_minimal_4">华为音乐 · 极简条 2×1（4列）</string>
+    <string name="widget_label_large_4">华为音乐 · 大幅卡片 4×4（4列）</string>
 
     <!-- 系统选择器里的描述文案（Android 12+ 显示） -->
     <string name="widget_desc_bar">莫兰迪克制氛围玻璃 + 圆角方图封面与底缘进度线，适合一行 5 格桌面</string>
@@ -33,7 +33,7 @@
 
     <!-- 空态、歌词与无障碍 -->
     <string name="widget_idle_title">未在播放</string>
-    <string name="widget_idle_subtitle">打开山水有清音开始听</string>
+    <string name="widget_idle_subtitle">打开华为音乐开始听</string>
     <string name="widget_paused_subtitle">已暂停</string>
     <string name="widget_cover_desc">专辑封面</string>
     <string name="widget_play_desc">播放或暂停</string>
@@ -42,7 +42,7 @@
     <string name="widget_fav_desc">收藏或取消收藏</string>
     <string name="widget_mode_desc">切换播放模式</string>
     <string name="widget_open_desc">打开应用</string>
-    <string name="widget_brand">山水有清音</string>
+    <string name="widget_brand">华为音乐</string>
     <string name="widget_lyric_desc">显示或隐藏歌词</string>
     <string name="widget_lyric_on_desc">歌词已显示，点击隐藏</string>
     <string name="widget_lyric_off_desc">歌词已隐藏，点击显示</string>

@@ -112,7 +112,6 @@ import com.sonance.player.data.PlayButtonShape
 import com.sonance.player.data.Prefs
 import com.sonance.player.data.formatDuration
 import com.sonance.player.data.formatSize
-import com.sonance.player.ui.BrandEditorDialog
 import com.sonance.player.ui.components.AdaptModeRow
 import com.sonance.player.ui.components.PlayPauseButton
 import com.sonance.player.ui.components.TagChip
@@ -157,8 +156,7 @@ private enum class SettingsCategory(
     APPEARANCE("外观界面", "外观", "主题皮肤、背景玻璃、列表播放条与桌面组件", SonanceIcons.Palette),
     PLAYBACK("播放音效", "音效", "均衡器、音频输出、通知播控与播放外观", SonanceIcons.Equalizer),
     LYRICS_COVER("歌词封面", "歌词", "歌词样式、锁屏歌词、在线歌词与封面补全", SonanceIcons.Lyrics),
-    LIBRARY_ONLINE("曲库在线", "曲库", "本地扫描、在线音源、曲库清理与格式检查", SonanceIcons.Folder),
-    ABOUT("关于支持", "关于", "版本信息、基线导出与支持作者", SonanceIcons.Info)
+    LIBRARY_ONLINE("曲库在线", "曲库", "本地扫描、在线音源、曲库清理与格式检查", SonanceIcons.Folder)
 }
 
 /**
@@ -222,15 +220,13 @@ private val SETTINGS_MODULES = listOf(
         "列表外观 行样式 封面尺寸 显示序号 显示时长 最近页听歌概览卡 听歌概览 概览卡 字母索引 右侧索引 " +
             "滚动条震动 紧凑 卡片 列表"),
     SettingsModule("topBar", SettingsCategory.APPEARANCE, "顶栏与启动",
-        "顶栏 左上角 右上角 应用名称 改名 名称 logo 图标 无 隐藏名称 隐藏图标 三个图标 三点菜单 竖向三点 " +
-            "视图图标 在线图标 设置图标 启动 打开应用 直接进入播放 播放界面 冷启动 默认播放页"),
+        "顶栏 右上角 三个图标 三点菜单 竖向三点 视图图标 在线图标 设置图标 启动 默认在线音乐 " +
+            "打开应用 直接进入播放 播放界面 冷启动 默认播放页"),
     SettingsModule("mini", SettingsCategory.APPEARANCE, "底部播放条",
         "底部播放条 迷你播放条 播放条 悬浮 贴底 液态玻璃 纯色 极简 进度 圆环进度 长条进度 环形 数字时间进度 " +
             "显示时间 高度 封面大小 离底部 圆角 左滑 右滑 滑动切歌 整卡滑动 槽内滑动 不透明度 音量"),
     SettingsModule("iconSet", SettingsCategory.APPEARANCE, "应用内图标风格",
         "应用内图标 图标风格 图标 圆润 线性 填充 双色 图标家族"),
-    SettingsModule("appIcon", SettingsCategory.APPEARANCE, "桌面应用图标",
-        "桌面应用图标 桌面图标 启动器 图标款式 更换图标"),
     SettingsModule("widget", SettingsCategory.APPEARANCE, "桌面小组件",
         "桌面小组件 小组件 组件 尺寸 固定配色 封面 歌曲信息 两排"),
     SettingsModule("play", SettingsCategory.PLAYBACK, "均衡器与睡眠定时",
@@ -266,11 +262,7 @@ private val SETTINGS_MODULES = listOf(
     SettingsModule("formatCompat", SettingsCategory.LIBRARY_ONLINE, "格式与兼容性检查",
         "格式 兼容性检查 兼容 解码 ape wma dsf 私有格式 加密容器 qmc ncm kgm 格式还原 缓存嗅探"),
     SettingsModule("overview", SettingsCategory.LIBRARY_ONLINE, "曲库统计概览",
-        "曲库统计 统计 概览 歌曲数 专辑 艺术家 收藏 总时长 占用空间"),
-    SettingsModule("about", SettingsCategory.ABOUT, "关于应用",
-        "关于 版本 更新 检查更新 设置基线 基线 导出 备份 署名 作者 官网 网站 主页 链接 ssyinyue"),
-    SettingsModule("donate", SettingsCategory.ABOUT, "支持作者",
-        "支持作者 赞赏 捐赠 微信 二维码 支持")
+        "曲库统计 统计 概览 歌曲数 专辑 艺术家 收藏 总时长 占用空间")
 )
 
 @Composable
@@ -428,7 +420,7 @@ private fun SettingsCategoryPage(
         // 默认隐藏。在「关于」里连点署名 10 次才会出现，且只保持一小时
         // （见 SonanceViewModel.tapAuthor / refreshConversionUnlock）
         if (vm.conversionUnlocked &&
-            (category == SettingsCategory.LIBRARY_ONLINE || category == SettingsCategory.ABOUT)) {
+            (category == SettingsCategory.LIBRARY_ONLINE)) {
             SettingsCategoryHeader(
                 title = "格式还原与缓存嗅探",
                 subtitle = "已临时解锁隐藏工具 · 1 小时后自动收起",
@@ -497,20 +489,6 @@ private fun SettingsModuleContent(
         "mini" -> MiniPlayerSettingsSection(vm = vm)
         "iconSet" -> IconSetSettingsSection(vm = vm)
 
-        "appIcon" -> SettingsSectionCard(
-            title = "桌面应用图标",
-            summary = "${AppIcons.all.size} 款图标 · 点击更换系统桌面图标",
-            icon = SonanceIcons.GridView
-        ) {
-            Text(
-                "切换后桌面图标会在几秒内刷新；部分第三方桌面可能需要重启桌面。",
-                style = MaterialTheme.typography.labelSmall,
-                color = skin.textDim
-            )
-            Spacer(Modifier.height(12.dp))
-            AppIconGrid(currentId = vm.appIconId, onSelect = { vm.changeAppIcon(it) })
-        }
-
         "widget" -> SettingsSectionCard(
             title = "桌面小组件",
             summary = "${WIDGET_STYLES.size} 种尺寸样式 · 长按桌面 → 小组件 添加",
@@ -539,7 +517,7 @@ private fun SettingsModuleContent(
                     if (!vm.onlineMusicEnabled) append("（未开启）")
                     if (vm.lxDownloadEnabled) append(" · 边听边存")
                 } else {
-                    append(if (vm.onlineMusicEnabled) "内置在线已开启" else "内置在线关闭")
+                    append(if (vm.onlineMusicEnabled) "华为音乐已开启" else "华为音乐已关闭")
                     if (vm.neteaseFillEnabled) append(" · 网易云补全")
                     if (vm.onlineDownloadEnabled) append(" · 边听边存")
                 }
@@ -606,15 +584,7 @@ private fun SettingsModuleContent(
             }
         }
 
-        "about" -> AboutSettingsSection(vm = vm)
 
-        "donate" -> SettingsSectionCard(
-            title = "支持作者",
-            summary = "微信扫一扫 · 请作者喝杯饮料",
-            icon = SonanceIcons.Heart
-        ) {
-            DonateCard()
-        }
     }
 }
 
@@ -1914,23 +1884,17 @@ private fun ListAppearanceSection(vm: SonanceViewModel) {
 @Composable
 private fun TopBarAndLaunchSection(vm: SonanceViewModel) {
     val skin = LocalSkin.current
-    var showBrandEditor by remember { mutableStateOf(false) }
 
     val modeSummary = if (vm.topBarIconsMode) "三个图标" else "三点菜单"
-    val brandSummary = buildString {
-        append(if (vm.appDisplayName.isBlank()) "名称已隐藏" else vm.appDisplayName)
-        append(" · ")
-        append(if (vm.topBarLogoId == "none") "无图标" else "自定义图标")
-    }
     SettingsSectionCard(
         title = "顶栏与启动",
-        summary = "$modeSummary · $brandSummary",
+        summary = "$modeSummary · 启动进入在线音乐",
         icon = SonanceIcons.Layers
     ) {
         // ---- 启动行为 ----
         SettingsSwitchRow(
             title = "启动时直接打开播放界面",
-            subtitle = "默认开启：进入应用的第一帧就是播放页（无展开动作）；关闭则第一帧是曲库列表",
+            subtitle = "默认关闭：进入应用先到在线音乐；开启后第一帧直接展开播放页",
             checked = vm.openPlayerOnLaunch,
             onCheckedChange = vm::changeOpenPlayerOnLaunch
         )
@@ -1994,25 +1958,8 @@ private fun TopBarAndLaunchSection(vm: SonanceViewModel) {
             )
         }
 
-        // ---- 左上角名称与图标 ----
-        Spacer(Modifier.height(16.dp))
-        SettingsActionRow(
-            title = "左上角名称与图标",
-            subtitle = "名称留空即隐藏、不占位；图标选「无」则融入背景，但保留可点区域，点一下进设置",
-            onClick = { showBrandEditor = true },
-            actionLabel = "编辑"
-        )
-        Text(
-            "也可以直接双击顶栏的名称或图标快速打开这个面板。",
-            style = MaterialTheme.typography.labelSmall,
-            color = skin.textDim,
-            modifier = Modifier.padding(top = 6.dp)
-        )
     }
 
-    if (showBrandEditor) {
-        BrandEditorDialog(vm = vm, onDismiss = { showBrandEditor = false })
-    }
 }
 
 /* ============================================================
@@ -2895,7 +2842,7 @@ private fun LyricsDisplaySettingsSection(vm: SonanceViewModel) {
             checked = vm.desktopLyricsEnabled,
             onCheckedChange = { enabled ->
                 if (enabled && !DesktopLyricsManager.hasOverlayPermission(context)) {
-                    Toast.makeText(context, "请授予山水有清音「悬浮窗」权限以开启桌面歌词", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "请授予华为音乐「悬浮窗」权限以开启桌面歌词", Toast.LENGTH_LONG).show()
                     runCatching {
                         val intent = Intent(
                             Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -3487,7 +3434,7 @@ private fun WidgetSettingsContent(vm: SonanceViewModel) {
 
             Spacer(Modifier.height(2.dp))
             Text(
-                "添加方式：长按桌面空白处 → 小组件 → 找到「山水有清音」（共 10 套：含 5 列保留与 4 列新增）。\n" +
+                "添加方式：长按桌面空白处 → 小组件 → 找到「华为音乐」（共 10 套：含 5 列保留与 4 列新增）。\n" +
                     "提供深色琉璃、浅色磨砂与苹果风高雾「液态玻璃」（半透明透壁纸），配合克制莫兰迪取色让封面纯净突出。",
                 style = MaterialTheme.typography.labelSmall,
                 color = skin.textDim
@@ -3612,7 +3559,7 @@ private fun OnlineModeSelectorCard(vm: SonanceViewModel) {
         ) {
             OnlineModeOptionButton(
                 title = "内置在线",
-                subtitle = "网易云直连曲库",
+                subtitle = "华为音乐直连曲库",
                 selected = vm.onlineMode == OnlineMode.BUILTIN,
                 onClick = { vm.changeOnlineMode(OnlineMode.BUILTIN) },
                 modifier = Modifier.weight(1f)
@@ -4205,13 +4152,13 @@ private fun AboutSettingsSection(vm: SonanceViewModel) {
 
     SettingsSectionCard(
         title = "关于应用",
-        summary = "山水有清音 · 版本 ${versionLabel.ifBlank { "—" }}",
+        summary = "华为音乐 · 版本 ${versionLabel.ifBlank { "—" }}",
         icon = SonanceIcons.Info,
         badge = versionLabel.takeIf { it.isNotBlank() }?.let { "v$it" }
     ) {
         Column(Modifier.padding(vertical = 4.dp)) {
             Text(
-                "山水有清音 · 本地音乐播放器",
+                "华为音乐 · 本地音乐播放器",
                 style = MaterialTheme.typography.titleSmall,
                 color = skin.text
             )

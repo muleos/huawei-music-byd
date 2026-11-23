@@ -2823,7 +2823,7 @@ private fun PlayerMoreActionsSheet(
                     .clickable {
                         hapticTick(context)
                         if (!DesktopLyricsManager.hasOverlayPermission(context)) {
-                            Toast.makeText(context, "请授予山水有清音「悬浮窗」权限以开启桌面歌词", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "请授予华为音乐「悬浮窗」权限以开启桌面歌词", Toast.LENGTH_LONG).show()
                             runCatching {
                                 val intent = Intent(
                                     Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -3474,10 +3474,16 @@ private fun PlayerPage(
         // 单次 BoxWithConstraints：原实现里再嵌了一层只为算封面边长，把这一层去掉，
         // 封面尺寸在外层一次算好，少一轮 measure。
         val portraitSide = if (!isWide) (if (boxW < boxH) boxW else boxH) else 0.dp
+        // 横屏时底部常驻任务栏/应用栏会盖住封面下沿：封面尺寸必须按**扣除安全区后的
+        // 可用高度**算，不能拿整屏高度算完再让布局去裁。桌面车机、平板三键导航都适用。
+        val navigationBottom = with(LocalDensity.current) {
+            WindowInsets.navigationBars.getBottom(this).toDp()
+        }
+        val landscapeHeight = (boxH - navigationBottom).coerceAtLeast(0.dp)
         val landscapeSide = when {
             !isWide -> 0.dp
-            compactPhone -> landscapeCoverSizeCompact(boxW, boxH)
-            else -> landscapeCoverSize(boxW, boxH)
+            compactPhone -> landscapeCoverSizeCompact(boxW, landscapeHeight)
+            else -> landscapeCoverSize(boxW, landscapeHeight)
         }
         // onGloballyPositioned 报的是像素，横屏推封面矩形时要用来算边长
         val landscapeSidePx = with(LocalDensity.current) { landscapeSide.toPx() }
@@ -3491,11 +3497,15 @@ private fun PlayerPage(
             Row(
                 modifier = Modifier
                     .fillMaxSize()
+                    // 把封面和右侧控制区整体抬到导航栏/车机任务栏之上
+                    .navigationBarsPadding()
                     .padding(
                         // 手机横屏：两侧多留一点，底部比顶部多留，把整体重心往上提
                         if (compactPhone) PaddingValues(
-                            start = 48.dp, top = 4.dp, end = 48.dp, bottom = 26.dp
-                        ) else PaddingValues(horizontal = 36.dp, vertical = 6.dp)
+                            start = 48.dp, top = 4.dp, end = 48.dp, bottom = 18.dp
+                        ) else PaddingValues(
+                            start = 36.dp, top = 6.dp, end = 36.dp, bottom = 10.dp
+                        )
                     ),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(
